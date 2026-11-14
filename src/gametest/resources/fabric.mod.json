@@ -1,0 +1,17 @@
+{
+	"schemaVersion": 1,
+	"id": "dglab-gametest",
+	"version": "0.0.0",
+	"name": "dglab game tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.urntt.dglab.gametest.DgLabLogicGameTest",
+			"com.urntt.dglab.gametest.DgLabClientGameTest",
+			"com.urntt.dglab.gametest.DgLabMultiplayerGameTest"
+		]
+	},
+	"depends": {
+		"dglab": "*"
+	}
+}
