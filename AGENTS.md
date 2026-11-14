@@ -44,7 +44,7 @@ The mod version itself follows [Semantic Versioning](https://semver.org/); the `
 
 - Client-only: `fabric.mod.json` declares `"environment": "client"`. There is no Minecraft server component, the mod sends nothing to Minecraft servers, and it does not change gameplay.
 - The mod talks to the DG-LAB app, not to the device: it hosts a WebSocket server that implements the app's socket control protocol, and the app connects by scanning a QR code shown in game. Bluetooth is out of scope.
-- The terminal and app IDs used for pairing are random for every game start.
+- The terminal and app IDs used for pairing are random for every game start. One app is bound at a time; an app that binds with the right terminal ID replaces the one bound before, whose device is set to zero first.
 - Only the local player's health drives the output. In two-player mode, which only works while this client hosts a world opened to LAN, the local player drives channel A and one named player drives channel B.
 - `DgLabController` is the single owner of the output state: it combines the configuration, the connection, and the game events every client tick.
 - Strength rules, per channel: damage adds strength and starts a hold period; after the hold the strength decays in steps down to a floor that scales with lost health; death raises the strength by a fixed amount. The strength never exceeds the limit set in the app.
@@ -75,11 +75,18 @@ The mod version itself follows [Semantic Versioning](https://semver.org/); the `
 - Language: Java only.
 - Source sets: `src/main` holds only `fabric.mod.json` and the icon. All code and client resources live in `src/client`, and the client game tests live in `src/gametest`.
 - Mixins: prefer the MixinExtras injectors bundled with Fabric Loader (for example `@ModifyExpressionValue` and `@WrapOperation`) over `@Redirect` and `@Overwrite`, to stay compatible with other mods and keep porting work small.
+- The only mixin observes `LocalPlayer.hurtTo`, which receives every health value the server sends. It remembers the previous health itself: by the time `hurtTo` runs, the player's health has usually been updated through its synced entity data already, so comparing with `getHealth()` finds no damage.
+- `feedback.StrengthController` and the `protocol` and `waveform` packages must not reach into the running game (no `Minecraft`, world, or player access), so that the rules can be tested without a world. `DgLabController` and `SecondPlayerMonitor` do that part.
+- The connection server reports its events through an executor that queues (`Minecraft.schedule`), so the controller sees them on the client thread in the order they happened.
 
 ### Testing
 
-- The client game tests in `src/gametest` start Minecraft and check the mod against a fake DG-LAB app that speaks the socket protocol. Keep them passing and extend them when behavior changes.
-- No real device is available to the tests. Changes to the protocol or the output must be reported to the user as needing a check on real hardware.
+- The client game tests in `src/gametest` start Minecraft and check the mod against `FakeDgLabApp`, a stand-in for the DG-LAB app that speaks the socket protocol over a real WebSocket. Keep them passing and extend them when behavior changes.
+  - `DgLabLogicGameTest` needs no world: the protocol, waveforms, translations, the configuration file, the strength rules tick by tick, the two-player rules, the connection server, and the QR code, which it decodes with ZXing.
+  - `DgLabClientGameTest` plays in a singleplayer world: damage, hold, decay and floor, death and respawn, every key binding, the commands, every screen in both languages, the QR code read back from a screenshot, the waveform editor, and leaving the world.
+  - `DgLabMultiplayerGameTest` checks damage on a local dedicated server. That server needs `eula = true` in the `configureTests` block of `build.gradle`; it accepts the Minecraft EULA only for that local test server.
+- Each test class sets the configuration it relies on, because the classes share the game's config file.
+- No real device is available to the tests, and neither is a second player, so two-player mode is only covered at the level of its rules. Changes to the protocol or the output must be reported to the user as needing a check on real hardware.
 - After porting to a new Minecraft version, run the client game tests. A successful build does not prove that the mixins still have the intended effect.
 - `README.md` describes how to run them, including on a headless machine.
 
