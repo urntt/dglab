@@ -39,6 +39,8 @@ public final class DgLabConfig {
 	public static final int DEFAULT_OUTPUT_MULTIPLIER = 100;
 	public static final int MAX_OUTPUT_MULTIPLIER = 1000;
 	public static final int MAX_PLAYER_NAME_LENGTH = 16;
+	/** The strength added to channel B when the second player leaves: none. */
+	public static final int DEFAULT_QUIT_STRENGTH = 0;
 	/** The preset name that selects a slot's custom waveform. */
 	public static final String CUSTOM_WAVEFORM = "custom";
 
@@ -337,7 +339,7 @@ public final class DgLabConfig {
 
 	private static final class TwoPlayer {
 		private String player = "";
-		private int quitStrength = 0;
+		private int quitStrength = DEFAULT_QUIT_STRENGTH;
 	}
 
 	private static final class WaveformChoice {

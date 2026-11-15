@@ -61,6 +61,8 @@ All key bindings are in **Options → Controls → Key Binds** and are unbound b
 
 All settings are saved to `config/dglab.json` as soon as you change them.
 
+Every slider has a **Reset** button next to it that puts it back to its default, and every settings page has a **Reset Page** button that does so for everything on that page. On the pages that have **Done** and **Cancel** buttons, a reset is saved by **Done** like any other change there. Key bindings are reset in the game's own key binds screen.
+
 On/off settings, each with a toggle key:
 
 | Setting | Default | Meaning |

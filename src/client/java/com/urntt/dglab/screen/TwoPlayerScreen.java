@@ -16,7 +16,8 @@ import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Edits who the second player of two-player mode is. "Done" saves, and "Cancel" or Escape discards the changes.
+ * Edits who the second player of two-player mode is. "Done" saves, "Cancel" or Escape discards the changes, and
+ * "Reset Page" fills in the defaults.
  */
 public final class TwoPlayerScreen extends Screen {
 	private static final Component TITLE = Component.translatable("options.dglab.two_player.title");
@@ -29,12 +30,14 @@ public final class TwoPlayerScreen extends Screen {
 	private static final int FIELD_HEIGHT = 20;
 	private static final int SPACING = 8;
 	private static final int DESCRIPTION_WIDTH = 320;
+	private static final int FOOTER_BUTTON_WIDTH = 100;
 
 	private final Screen parent;
 	private final DgLabConfig config;
 	private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
 	private @Nullable EditBox playerBox;
 	private @Nullable IntSlider quitStrengthSlider;
+	private @Nullable Button resetQuitStrengthButton;
 
 	public TwoPlayerScreen(final Screen parent, final DgLabConfig config) {
 		super(TITLE);
@@ -53,25 +56,29 @@ public final class TwoPlayerScreen extends Screen {
 
 		GridLayout grid = contents.addChild(new GridLayout().spacing(SPACING));
 		grid.defaultCellSetting().alignVerticallyMiddle();
-		GridLayout.RowHelper rows = grid.createRowHelper(2);
+		GridLayout.RowHelper rows = grid.createRowHelper(3);
 
 		rows.addChild(new StringWidget(PLAYER, this.font));
-		this.playerBox = rows.addChild(new EditBox(this.font, FIELD_WIDTH, FIELD_HEIGHT, PLAYER));
+		this.playerBox = rows.addChild(new EditBox(this.font, FIELD_WIDTH, FIELD_HEIGHT, PLAYER), 2);
 		this.playerBox.setMaxLength(DgLabConfig.MAX_PLAYER_NAME_LENGTH);
 		this.playerBox.setHint(PLAYER_HINT);
 		this.playerBox.setValue(this.config.secondPlayer());
 
 		rows.addChild(new StringWidget(QUIT_STRENGTH, this.font));
+		Button resetQuitStrength = ResetButtons.forSetting(QUIT_STRENGTH, quitStrengthText(DgLabConfig.DEFAULT_QUIT_STRENGTH),
+				() -> this.setQuitStrength(DgLabConfig.DEFAULT_QUIT_STRENGTH));
+		this.resetQuitStrengthButton = resetQuitStrength;
 		this.quitStrengthSlider = rows.addChild(new IntSlider(FIELD_WIDTH, 0, AppCommands.MAX_STRENGTH,
-				this.config.secondPlayerQuitStrength(),
-				value -> value == 0 ? CommonComponents.OPTION_OFF : Component.literal(Integer.toString(value)),
-				value -> {
-				}));
+				this.config.secondPlayerQuitStrength(), TwoPlayerScreen::quitStrengthText,
+				value -> resetQuitStrength.active = value != DgLabConfig.DEFAULT_QUIT_STRENGTH));
 		this.quitStrengthSlider.setTooltip(Tooltip.create(Component.translatable("options.dglab.two_player.quit_strength.tooltip")));
+		rows.addChild(resetQuitStrength);
+		resetQuitStrength.active = this.config.secondPlayerQuitStrength() != DgLabConfig.DEFAULT_QUIT_STRENGTH;
 
 		LinearLayout footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(SPACING));
-		footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.saveAndClose()).build());
-		footer.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).build());
+		footer.addChild(ResetButtons.forPage(this::fillInDefaults, false).width(FOOTER_BUTTON_WIDTH).build());
+		footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.saveAndClose()).width(FOOTER_BUTTON_WIDTH).build());
+		footer.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).width(FOOTER_BUTTON_WIDTH).build());
 
 		this.layout.visitWidgets(this::addRenderableWidget);
 		this.repositionElements();
@@ -85,6 +92,25 @@ public final class TwoPlayerScreen extends Screen {
 	@Override
 	public void onClose() {
 		this.minecraft.gui.setScreen(this.parent);
+	}
+
+	/** Puts the defaults into the fields. Like every other change here, they are saved by "Done". */
+	private void fillInDefaults() {
+		if (this.playerBox != null) {
+			this.playerBox.setValue("");
+		}
+		this.setQuitStrength(DgLabConfig.DEFAULT_QUIT_STRENGTH);
+	}
+
+	private void setQuitStrength(final int strength) {
+		if (this.quitStrengthSlider != null && this.resetQuitStrengthButton != null) {
+			this.quitStrengthSlider.setIntValue(strength);
+			this.resetQuitStrengthButton.active = strength != DgLabConfig.DEFAULT_QUIT_STRENGTH;
+		}
+	}
+
+	private static Component quitStrengthText(final int strength) {
+		return strength == 0 ? CommonComponents.OPTION_OFF : Component.literal(Integer.toString(strength));
 	}
 
 	private void saveAndClose() {

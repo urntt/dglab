@@ -19,7 +19,6 @@ import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -32,7 +31,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Edits a slot's custom waveform sample by sample. A sample is either set by hand or interpolated between the
  * nearest hand-set samples before and after it; the first and the last sample are always set by hand. "Done" saves
- * the waveform and makes the slot use it, and "Cancel" or Escape discards the changes.
+ * the waveform and makes the slot use it, "Cancel" or Escape discards the changes, and "Reset Page" loads the slot's
+ * default preset.
  */
 public final class WaveformEditorScreen extends Screen {
 	private static final Component INTENSITY = Component.translatable("options.dglab.waveform.editor.intensity");
@@ -54,7 +54,10 @@ public final class WaveformEditorScreen extends Screen {
 	private static final int MODE_WIDTH = 50;
 	private static final int SLIDER_WIDTH = (ROW_WIDTH - TIME_WIDTH - MODE_WIDTH - 3 * SPACING) / 2;
 	private static final int PREVIEW_HEIGHT = 24;
-	private static final int FOOTER_BUTTON_WIDTH = 74;
+	/** Four buttons and three gaps fill a row. */
+	private static final int EDIT_BUTTON_WIDTH = (ROW_WIDTH - 3 * SPACING) / 4;
+	/** Three buttons and two gaps fill a row. */
+	private static final int CLOSE_BUTTON_WIDTH = (ROW_WIDTH - 2 * SPACING) / 3;
 	private static final int TEXT_COLOR = 0xFFFFFFFF;
 	private static final int PREVIEW_BACKGROUND = 0x80000000;
 	private static final int PREVIEW_BAR = 0xFFFFDD33;
@@ -102,18 +105,18 @@ public final class WaveformEditorScreen extends Screen {
 
 		this.sampleList = this.layout.addToContents(new SampleList());
 
-		GridLayout footer = this.layout.addToFooter(new GridLayout().spacing(SPACING));
-		GridLayout.RowHelper rows = footer.createRowHelper(4);
-		this.addButton = rows.addChild(Button.builder(ADD, button -> this.addFrame()).width(FOOTER_BUTTON_WIDTH).build());
-		this.removeButton = rows.addChild(Button.builder(REMOVE, button -> this.removeFrame()).width(FOOTER_BUTTON_WIDTH).build());
-		rows.addChild(Button.builder(COPY, button -> this.copy()).width(FOOTER_BUTTON_WIDTH)
+		LinearLayout footer = this.layout.addToFooter(LinearLayout.vertical().spacing(SPACING));
+		LinearLayout editing = footer.addChild(LinearLayout.horizontal().spacing(SPACING));
+		this.addButton = editing.addChild(Button.builder(ADD, button -> this.addFrame()).width(EDIT_BUTTON_WIDTH).build());
+		this.removeButton = editing.addChild(Button.builder(REMOVE, button -> this.removeFrame()).width(EDIT_BUTTON_WIDTH).build());
+		editing.addChild(Button.builder(COPY, button -> this.copy()).width(EDIT_BUTTON_WIDTH)
 				.tooltip(Tooltip.create(Component.translatable("options.dglab.waveform.editor.copy.tooltip"))).build());
-		rows.addChild(Button.builder(PASTE, button -> this.paste()).width(FOOTER_BUTTON_WIDTH)
+		editing.addChild(Button.builder(PASTE, button -> this.paste()).width(EDIT_BUTTON_WIDTH)
 				.tooltip(Tooltip.create(Component.translatable("options.dglab.waveform.editor.paste.tooltip"))).build());
-		rows.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.saveAndClose())
-				.width(2 * FOOTER_BUTTON_WIDTH + SPACING).build(), 2);
-		rows.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose())
-				.width(2 * FOOTER_BUTTON_WIDTH + SPACING).build(), 2);
+		LinearLayout closing = footer.addChild(LinearLayout.horizontal().spacing(SPACING));
+		closing.addChild(ResetButtons.forPage(this::loadDefault, false).width(CLOSE_BUTTON_WIDTH).build());
+		closing.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.saveAndClose()).width(CLOSE_BUTTON_WIDTH).build());
+		closing.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).width(CLOSE_BUTTON_WIDTH).build());
 
 		this.layout.visitWidgets(this::addRenderableWidget);
 		this.repositionElements();
@@ -147,6 +150,12 @@ public final class WaveformEditorScreen extends Screen {
 		this.config.setCustomWaveform(this.slot, this.waveform());
 		this.config.useCustomWaveform(this.slot);
 		this.onClose();
+	}
+
+	/** Replaces the edited waveform with the slot's default preset. Like every other change here, it is saved by "Done". */
+	private void loadDefault() {
+		this.load(this.slot.defaultPreset().waveform());
+		this.rebuildList();
 	}
 
 	private void load(final Waveform waveform) {

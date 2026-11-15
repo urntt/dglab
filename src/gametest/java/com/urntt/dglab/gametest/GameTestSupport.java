@@ -9,6 +9,7 @@ import com.urntt.dglab.protocol.Channel;
 import com.urntt.dglab.server.PairingServer;
 import com.urntt.dglab.server.PairingUrl;
 import com.urntt.dglab.waveform.WaveformSlot;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -160,32 +161,48 @@ final class GameTestSupport {
 	}
 
 	/**
-	 * Presses the button labeled with the translation of {@code translationKey} on the current screen. Unlike the
-	 * test API's own method, it also finds buttons inside lists.
+	 * Presses the first active button labeled with the translation of {@code translationKey} on the current screen.
+	 * Unlike the test API's own method, it also finds buttons inside lists.
 	 */
 	static void clickButton(final ClientGameTestContext context, final String translationKey) {
 		context.runOnClient(client -> {
-			String label = Component.translatable(translationKey).getString();
-			AbstractButton button = client.gui.screen() == null ? null : findButton(client.gui.screen(), label);
-			check(button != null, "no button labeled \"" + label + "\" on " + client.gui.screen());
-			check(button.active, "the button labeled \"" + label + "\" is not active");
+			List<AbstractButton> buttons = findButtons(client.gui.screen(), translationKey);
+			check(!buttons.isEmpty(), "no button labeled \"" + label(translationKey) + "\" on " + client.gui.screen());
+			AbstractButton button = buttons.stream().filter(candidate -> candidate.active).findFirst().orElse(null);
+			check(button != null, "no button labeled \"" + label(translationKey) + "\" is active");
 			button.onPress(new MouseButtonInfo(0, 0));
 		});
 	}
 
-	private static AbstractButton findButton(final ContainerEventHandler container, final String label) {
+	/**
+	 * Counts the active buttons labeled with the translation of {@code translationKey} on the current screen.
+	 */
+	static int countActiveButtons(final ClientGameTestContext context, final String translationKey) {
+		return context.computeOnClient(client -> (int) findButtons(client.gui.screen(), translationKey).stream()
+				.filter(button -> button.active).count());
+	}
+
+	private static String label(final String translationKey) {
+		return Component.translatable(translationKey).getString();
+	}
+
+	private static List<AbstractButton> findButtons(final ContainerEventHandler container, final String translationKey) {
+		List<AbstractButton> buttons = new ArrayList<>();
+		if (container != null) {
+			collectButtons(container, label(translationKey), buttons);
+		}
+		return buttons;
+	}
+
+	private static void collectButtons(final ContainerEventHandler container, final String label, final List<AbstractButton> buttons) {
 		for (GuiEventListener child : container.children()) {
 			if (child instanceof AbstractButton button && button.getMessage().getString().equals(label)) {
-				return button;
+				buttons.add(button);
 			}
 			if (child instanceof ContainerEventHandler nested) {
-				AbstractButton found = findButton(nested, label);
-				if (found != null) {
-					return found;
-				}
+				collectButtons(nested, label, buttons);
 			}
 		}
-		return null;
 	}
 
 	/**

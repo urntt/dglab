@@ -10,6 +10,7 @@ import static com.urntt.dglab.gametest.GameTestSupport.checkNoCommands;
 import static com.urntt.dglab.gametest.GameTestSupport.clickButton;
 import static com.urntt.dglab.gametest.GameTestSupport.configure;
 import static com.urntt.dglab.gametest.GameTestSupport.connectApp;
+import static com.urntt.dglab.gametest.GameTestSupport.countActiveButtons;
 import static com.urntt.dglab.gametest.GameTestSupport.get;
 import static com.urntt.dglab.gametest.GameTestSupport.loadSavedConfig;
 import static com.urntt.dglab.gametest.GameTestSupport.prepareWorld;
@@ -73,6 +74,9 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 	private static final int COMPACT_GUI_SCALE = 2;
 	/** The GUI scale at which the long screens show all their rows at once. */
 	private static final int FULL_GUI_SCALE = 1;
+	/** Vanilla's label of a button that resets one setting. */
+	private static final String RESET = "controls.reset";
+	private static final String RESET_PAGE = "options.dglab.reset_page";
 	private static final List<String> SILENCE = List.of("strength-1+2+0", "clear-1", "strength-2+2+0", "clear-2");
 
 	@Override
@@ -96,6 +100,7 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 				app = checkServerToggle(context, app);
 				checkCommands(context, server, app);
 				checkOpenSettingsKey(context);
+				checkResetButtons(context);
 				checkScreens(context);
 
 				// Leave the world with strength on both channels.
@@ -391,6 +396,115 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 		context.waitForScreen(DgLabConfigScreen.class);
 		context.setScreen(() -> null);
 		unbindKey(context, key);
+	}
+
+	/**
+	 * Uses the reset buttons the way a player does: the one next to a slider, and the one for a whole page.
+	 */
+	private static void checkResetButtons(final ClientGameTestContext context) {
+		Supplier<Screen> mainPage = () -> new DgLabConfigScreen(null);
+		resetConfig(context);
+
+		// Strength settings: a slider's own button resets that slider only, in place.
+		configure(context, config -> {
+			config.setValue(Channel.A, ChannelOption.HOLD_TICKS, 7);
+			config.setValue(Channel.B, ChannelOption.DECAY_STEP, 3);
+		});
+		context.setScreen(() -> new StrengthScreen(mainPage.get()));
+		Screen strengthPage = context.computeOnClient(client -> client.gui.screen());
+		checkEquals(2, countActiveButtons(context, RESET), "active reset buttons with two changed strength settings");
+		clickButton(context, RESET);
+		checkEquals(ChannelOption.HOLD_TICKS.defaultValue(), value(context, Channel.A, ChannelOption.HOLD_TICKS), "hold time after its reset button");
+		checkEquals(3.0, value(context, Channel.B, ChannelOption.DECAY_STEP), "decay step after another slider's reset button");
+		checkEquals(1, countActiveButtons(context, RESET), "active reset buttons after resetting one slider");
+		check(context.computeOnClient(client -> client.gui.screen() == strengthPage), "resetting a slider must keep the page");
+		checkEquals(ChannelOption.HOLD_TICKS.defaultValue(), loadSavedConfig().value(Channel.A, ChannelOption.HOLD_TICKS), "saved hold time after its reset button");
+
+		// The page's button resets everything on it.
+		configure(context, config -> config.setValue(Channel.A, ChannelOption.STRENGTH_PER_DAMAGE, 5.5));
+		clickButton(context, RESET_PAGE);
+		context.waitForScreen(StrengthScreen.class);
+		for (Channel channel : Channel.values()) {
+			for (ChannelOption option : ChannelOption.values()) {
+				checkEquals(option.defaultValue(), value(context, channel, option), option.id() + " of channel " + channel + " after resetting the page");
+			}
+		}
+		checkEquals(0, countActiveButtons(context, RESET), "active reset buttons after resetting the page");
+
+		// Main page: the output multiplier's own button, then the page's button for switches and sliders alike.
+		configure(context, config -> {
+			config.setOutputMultiplier(300);
+			config.setHudX(50);
+			config.set(ToggleSetting.HUD_LIMIT, true);
+			config.set(ToggleSetting.DEATH_RESPONSE, false);
+		});
+		context.setScreen(mainPage);
+		checkEquals(2, countActiveButtons(context, RESET), "active reset buttons with two changed sliders on the main page");
+		clickButton(context, RESET);
+		checkEquals(DgLabConfig.DEFAULT_OUTPUT_MULTIPLIER, context.computeOnClient(client -> DgLabClient.config().outputMultiplier()),
+				"output multiplier after its reset button");
+		checkEquals(50, context.computeOnClient(client -> DgLabClient.config().hudX()), "HUD position after another slider's reset button");
+		clickButton(context, RESET_PAGE);
+		context.waitForScreen(DgLabConfigScreen.class);
+		checkEquals(DgLabConfig.DEFAULT_HUD_PERCENT, context.computeOnClient(client -> DgLabClient.config().hudX()), "HUD position after resetting the page");
+		for (ToggleSetting setting : ToggleSetting.values()) {
+			checkEquals(setting.defaultValue(), get(context, setting), setting.id() + " after resetting the page");
+		}
+
+		// Waveforms: the slots return to their presets, and their custom waveforms stay.
+		Waveform custom = Waveform.ofIntensities(Waveform.MIN_FREQUENCY, 10, 20, 30, 40);
+		configure(context, config -> {
+			config.setCustomWaveform(WaveformSlot.B_DAMAGE, custom);
+			config.useCustomWaveform(WaveformSlot.B_DAMAGE);
+		});
+		context.setScreen(() -> new WaveformScreen(mainPage.get()));
+		clickButton(context, RESET_PAGE);
+		context.waitForScreen(WaveformScreen.class);
+		checkEquals(WaveformPreset.THUMP.waveform(), context.computeOnClient(client -> DgLabClient.config().waveform(WaveformSlot.B_DAMAGE)),
+				"waveform of a slot after resetting the page");
+		checkEquals(custom, context.computeOnClient(client -> DgLabClient.config().customWaveform(WaveformSlot.B_DAMAGE)),
+				"custom waveform of a slot after resetting the page");
+
+		// The editor: resetting loads the slot's default preset, and "Done" saves it as the custom waveform.
+		clickButton(context, "options.dglab.waveform.edit");
+		clickButton(context, "options.dglab.waveform.editor.add");
+		clickButton(context, RESET_PAGE);
+		clickButton(context, "gui.done");
+		context.waitForScreen(WaveformScreen.class);
+		checkEquals(WaveformPreset.THUMP.waveform(), context.computeOnClient(client -> DgLabClient.config().customWaveform(WaveformSlot.A_DAMAGE)),
+				"custom waveform after resetting the editor");
+
+		// Connection settings: the defaults are filled in and saved by "Done". The listen port stays as it is here,
+		// because changing it would restart the server the fake app is connected to.
+		configure(context, config -> config.setConnection(DgLabConfig.DEFAULT_PORT, "192.168.1.9", 23456));
+		context.setScreen(() -> new ConnectionScreen(mainPage.get(), DgLabClient.config()));
+		clickButton(context, RESET_PAGE);
+		checkEquals("192.168.1.9", context.computeOnClient(client -> DgLabClient.config().qrAddress()), "QR address before the reset is saved");
+		clickButton(context, "gui.done");
+		checkEquals(DgLabConfig.QR_ADDRESS_AUTOMATIC, loadSavedConfig().qrAddress(), "saved QR address after resetting the page");
+		checkEquals(DgLabConfig.QR_PORT_SAME_AS_LISTEN, loadSavedConfig().qrPort(), "saved QR port after resetting the page");
+
+		// Two-player settings: the slider's own button leaves the name alone, the page's button clears both.
+		configure(context, config -> config.setTwoPlayer("Alex", 30));
+		context.setScreen(() -> new TwoPlayerScreen(mainPage.get(), DgLabClient.config()));
+		clickButton(context, RESET);
+		checkEquals(0, countActiveButtons(context, RESET), "active reset buttons after resetting the only slider");
+		clickButton(context, "gui.done");
+		checkEquals("Alex", loadSavedConfig().secondPlayer(), "second player after resetting the slider");
+		checkEquals(0, loadSavedConfig().secondPlayerQuitStrength(), "strength added on leaving after resetting the slider");
+		configure(context, config -> config.setTwoPlayer("Alex", 30));
+		context.setScreen(() -> new TwoPlayerScreen(mainPage.get(), DgLabClient.config()));
+		clickButton(context, RESET_PAGE);
+		clickButton(context, "gui.done");
+		checkEquals("", loadSavedConfig().secondPlayer(), "second player after resetting the page");
+		checkEquals(0, loadSavedConfig().secondPlayerQuitStrength(), "strength added on leaving after resetting the page");
+
+		context.setScreen(() -> null);
+		resetConfig(context);
+	}
+
+	private static double value(final ClientGameTestContext context, final Channel channel, final ChannelOption option) {
+		return context.computeOnClient(client -> DgLabClient.config().value(channel, option));
 	}
 
 	/**

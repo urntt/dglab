@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Edits the connection server's port and what the pairing QR code points to. "Done" saves and is disabled while a
- * field is invalid, and "Cancel" or Escape discards the changes.
+ * field is invalid, "Cancel" or Escape discards the changes, and "Reset Page" fills in the defaults.
  */
 public final class ConnectionScreen extends Screen {
 	private static final Component TITLE = Component.translatable("options.dglab.connection.title");
@@ -35,6 +35,7 @@ public final class ConnectionScreen extends Screen {
 	private static final int FIELD_WIDTH = 180;
 	private static final int FIELD_HEIGHT = 20;
 	private static final int SPACING = 8;
+	private static final int FOOTER_BUTTON_WIDTH = 100;
 	private static final int MAX_PORT_LENGTH = 5;
 	/** Longest host name the address field accepts. */
 	private static final int MAX_ADDRESS_LENGTH = 253;
@@ -120,8 +121,10 @@ public final class ConnectionScreen extends Screen {
 		this.qrPortBox.setResponder(text -> this.validate());
 
 		LinearLayout footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(SPACING));
-		this.doneButton = footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.saveAndClose()).build());
-		footer.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).build());
+		footer.addChild(ResetButtons.forPage(this::fillInDefaults, false).width(FOOTER_BUTTON_WIDTH).build());
+		this.doneButton = footer.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.saveAndClose())
+				.width(FOOTER_BUTTON_WIDTH).build());
+		footer.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).width(FOOTER_BUTTON_WIDTH).build());
 
 		this.layout.visitWidgets(this::addRenderableWidget);
 		this.repositionElements();
@@ -136,6 +139,18 @@ public final class ConnectionScreen extends Screen {
 	@Override
 	public void onClose() {
 		this.minecraft.gui.setScreen(this.parent);
+	}
+
+	/** Puts the defaults into the fields. Like every other change here, they are saved by "Done". */
+	private void fillInDefaults() {
+		if (this.listenPortBox == null || this.addressButton == null || this.customAddressBox == null || this.qrPortBox == null) {
+			return;
+		}
+		this.listenPortBox.setValue(Integer.toString(DgLabConfig.DEFAULT_PORT));
+		this.addressButton.setValue(AUTOMATIC);
+		this.customAddressBox.setValue("");
+		this.qrPortBox.setValue("");
+		this.validate();
 	}
 
 	private void saveAndClose() {

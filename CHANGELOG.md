@@ -16,7 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Add a two-player mode for worlds opened to LAN, in which a second player's health drives channel B.
 - Add a key binding for every on/off setting, unbound by default, that flips the setting, saves it, and shows the new state on the action bar.
 - Add an "Open dglab Settings" key binding, unbound by default, and a configuration screen built from vanilla widgets that Mod Menu, which is optional, can open too.
-- Add the `/dglab` client command for status, pairing, the connection server, strength, the settings, and waveform tests.
+- Add a reset button next to every slider and a "Reset Page" button on every settings page.
+- Add the `/dglab` client command for status, pairing, the connection server, strength, the output multiplier, the settings, and waveform tests.
 - Set both channels to zero when the output or the connection server is switched off and when the player leaves the world.
 - Save all settings to `config/dglab.json`.
 - Add English and Simplified Chinese translations.

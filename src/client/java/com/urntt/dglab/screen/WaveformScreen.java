@@ -8,18 +8,16 @@ import com.urntt.dglab.waveform.WaveformSlot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.network.chat.Component;
 
 /**
  * Chooses the waveform of each slot: a preset or the slot's custom waveform, which the editor changes.
  */
-public final class WaveformScreen extends OptionsSubScreen {
+public final class WaveformScreen extends DgLabOptionsScreen {
 	private static final Component TITLE = Component.translatable("options.dglab.waveforms.title");
 	private static final Component PRESET = Component.translatable("options.dglab.waveform.preset");
 	private static final Component CUSTOM = Component.translatable("options.dglab.waveform.preset.custom");
@@ -27,14 +25,23 @@ public final class WaveformScreen extends OptionsSubScreen {
 	private static final Component EDIT = Component.translatable("options.dglab.waveform.edit");
 
 	public WaveformScreen(final Screen parent) {
-		super(parent, Minecraft.getInstance().options, TITLE);
+		super(parent, TITLE);
 	}
 
 	/**
-	 * Returns a new screen with the same parent, showing the current settings. The editor returns to it, because a
-	 * screen that is shown again keeps its old widgets.
+	 * Makes every slot play its default preset again. The slots' custom waveforms are kept; the editor resets those.
 	 */
-	Screen recreate() {
+	@Override
+	protected void resetPage() {
+		DgLabConfig config = DgLabClient.config();
+		for (WaveformSlot slot : WaveformSlot.values()) {
+			config.setWaveformPreset(slot, slot.defaultPreset());
+		}
+	}
+
+	/** Also used by the editor to return here, so that this page shows the slot's new choice. */
+	@Override
+	protected Screen recreate() {
 		return new WaveformScreen(this.lastScreen);
 	}
 

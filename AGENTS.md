@@ -55,6 +55,7 @@ The mod version itself follows [Semantic Versioning](https://semver.org/); the `
 - Every on/off setting is a `ToggleSetting`. Each has an entry on the configuration screen and its own key binding, unbound by default; pressing it flips the setting, saves it, and shows the new state on the action bar. Numeric settings have no key binding.
 - A further key binding, also unbound by default, opens the configuration screen. Mod Menu and the `/dglab settings` command open it too.
 - Every change is saved to the configuration file immediately.
+- Resetting follows vanilla's key binds screen: every slider has its own "Reset" button, disabled while the slider is at its default, and every settings page has a "Reset Page" button in its footer for everything on that page. Pages that save immediately extend `DgLabOptionsScreen`, which provides both; on the pages with "Done" and "Cancel", a reset only fills in the defaults. The samples in the waveform editor are data without defaults, so the editor only has the page button, which loads the slot's default preset.
 - The `/dglab` client command exposes status, pairing, the connection server, strength, the output multiplier, the toggles, the per-channel numbers, and waveform tests.
 
 ### Localization
@@ -84,8 +85,8 @@ The mod version itself follows [Semantic Versioning](https://semver.org/); the `
 ### Testing
 
 - The client game tests in `src/gametest` start Minecraft and check the mod against `FakeDgLabApp`, a stand-in for the DG-LAB app that speaks the socket protocol over a real WebSocket. Keep them passing and extend them when behavior changes.
-  - `DgLabLogicGameTest` needs no world: the protocol, waveforms, translations, the configuration file, the strength rules tick by tick, the two-player rules, the connection server, and the QR code, which it decodes with ZXing.
-  - `DgLabClientGameTest` plays in a singleplayer world: damage, hold, decay and floor, death and respawn, every key binding, the commands, every screen in both languages, the QR code read back from a screenshot, the waveform editor, and leaving the world.
+  - `DgLabLogicGameTest` needs no world: the protocol, waveforms, translations, the configuration file, the strength rules tick by tick, the two-player rules, the output multiplier, the connection server, and the QR code, which it decodes with ZXing.
+  - `DgLabClientGameTest` plays in a singleplayer world: the pause menu's connection state, damage, hold, decay and floor, death and respawn, every key binding, the commands, the reset buttons, every screen in both languages, the QR code read back from a screenshot, the waveform editor, and leaving the world.
   - `DgLabMultiplayerGameTest` checks damage on a local dedicated server. That server needs `eula = true` in the `configureTests` block of `build.gradle`; it accepts the Minecraft EULA only for that local test server.
 - Each test class sets the configuration it relies on, because the classes share the game's config file.
 - No real device is available to the tests, and neither is a second player, so two-player mode is only covered at the level of its rules. Changes to the protocol or the output must be reported to the user as needing a check on real hardware.
