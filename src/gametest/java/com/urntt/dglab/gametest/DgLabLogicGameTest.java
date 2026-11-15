@@ -9,11 +9,13 @@ import com.google.zxing.ChecksumException;
 import com.google.zxing.FormatException;
 import com.google.zxing.qrcode.decoder.Decoder;
 import com.urntt.dglab.DgLabClient;
+import com.urntt.dglab.DgLabController;
 import com.urntt.dglab.command.DgLabCommand;
 import com.urntt.dglab.config.ChannelOption;
 import com.urntt.dglab.config.DgLabConfig;
 import com.urntt.dglab.config.ToggleSetting;
 import com.urntt.dglab.feedback.HealthTracker;
+import com.urntt.dglab.hud.PauseMenuStatus;
 import com.urntt.dglab.feedback.StrengthController;
 import com.urntt.dglab.feedback.StrengthController.Source;
 import com.urntt.dglab.protocol.AppCommands;
@@ -62,6 +64,7 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 			checkTwoPlayerRules(directory);
 			checkPairingQr();
 			checkPairingServer();
+			checkPauseMenuStatus(directory);
 		} catch (IOException | FormatException | ChecksumException e) {
 			throw new AssertionError(e);
 		}
@@ -591,6 +594,24 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 			LOGGER.info("Pairing server checks passed on port {}", port);
 		} finally {
 			server.close();
+		}
+	}
+
+	/**
+	 * The pause menu names the state of a connection server that has no app, unless the server is switched off.
+	 */
+	private static void checkPauseMenuStatus(final Path directory) throws IOException {
+		DgLabConfig config = DgLabConfig.load(directory.resolve("pause-menu.json"));
+		DgLabController controller = new DgLabController(config, Runnable::run);
+		try (ServerSocket taken = new ServerSocket(0)) {
+			checkEquals(List.of(), PauseMenuStatus.lines(config, controller), "pause menu lines with a stopped server");
+			controller.server().start(taken.getLocalPort());
+			await("the start on a taken port to fail", () -> controller.server().state() == PairingServer.State.FAILED);
+			checkEquals(List.of(PauseMenuStatus.SERVER_FAILED), PauseMenuStatus.lines(config, controller), "pause menu lines with a failed server");
+			config.set(ToggleSetting.HUD, false);
+			checkEquals(List.of(), PauseMenuStatus.lines(config, controller), "pause menu lines with the HUD off");
+		} finally {
+			controller.close();
 		}
 	}
 

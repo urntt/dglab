@@ -28,6 +28,7 @@ import com.urntt.dglab.DgLabClient;
 import com.urntt.dglab.config.ChannelOption;
 import com.urntt.dglab.config.DgLabConfig;
 import com.urntt.dglab.config.ToggleSetting;
+import com.urntt.dglab.hud.PauseMenuStatus;
 import com.urntt.dglab.hud.StrengthHud;
 import com.urntt.dglab.protocol.AppCommands;
 import com.urntt.dglab.protocol.Channel;
@@ -53,6 +54,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -84,9 +86,10 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 				singleplayer.getConnection().waitForChunksRender();
 				TestServerContext server = singleplayer.getServer();
 				prepareWorld(context, server);
-				checkEquals(List.of(StrengthHud.NOT_CONNECTED.getString()), hudLines(context), "HUD before an app connected");
+				checkPauseMenuStatus(context);
 
 				app = connectApp(context);
+				checkEquals(List.of(), pauseMenuLines(context), "pause menu with an app connected");
 				checkDamageAndDecay(context, server, app);
 				checkDeath(context, server, app);
 				checkToggleKeys(context, server, app);
@@ -130,6 +133,29 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 		// The connection server starts with the game.
 		context.waitFor(client -> DgLabClient.controller().server().state() == PairingServer.State.LISTENING);
 		checkEquals(DgLabConfig.DEFAULT_PORT, context.computeOnClient(client -> DgLabClient.controller().server().port()), "port of the connection server");
+	}
+
+	/**
+	 * Without an app, the HUD stays empty and the pause menu says why.
+	 */
+	private static void checkPauseMenuStatus(final ClientGameTestContext context) {
+		checkEquals(List.of(), hudLines(context), "HUD before an app connected");
+		checkEquals(List.of(PauseMenuStatus.NOT_CONNECTED.getString()), pauseMenuLines(context), "pause menu before an app connected");
+		context.takeScreenshot("hud-not-connected");
+
+		context.setScreen(() -> new PauseScreen(true));
+		check(context.computeOnClient(client -> PauseMenuStatus.isPauseMenu(client.gui.screen())), "the pause menu must be recognized");
+		context.getInput().setCursorPos(0, 0);
+		context.waitTicks(2);
+		context.takeScreenshot("pause-menu-not-connected");
+		context.setScreen(() -> new PauseScreen(false));
+		check(!context.computeOnClient(client -> PauseMenuStatus.isPauseMenu(client.gui.screen())), "the bare pause screen is not the pause menu");
+		context.setScreen(() -> null);
+
+		// The HUD's switch also hides the hint on the pause menu.
+		configure(context, config -> config.set(ToggleSetting.HUD, false));
+		checkEquals(List.of(), pauseMenuLines(context), "pause menu with the HUD off");
+		configure(context, config -> config.set(ToggleSetting.HUD, true));
 	}
 
 	private static void checkDamageAndDecay(final ClientGameTestContext context, final TestServerContext server, final FakeDgLabApp app) {
@@ -300,6 +326,7 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 		context.waitFor(client -> !DgLabClient.controller().strength().isBound());
 		check(!loadSavedConfig().get(ToggleSetting.SERVER_ENABLED), "the stopped server must be saved");
 		checkEquals(List.of(), hudLines(context), "HUD with the connection server off");
+		checkEquals(List.of(), pauseMenuLines(context), "pause menu with the connection server off");
 		app.close();
 
 		context.getInput().pressKey(key);
@@ -436,6 +463,11 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 		} catch (IOException | ReaderException e) {
 			throw new AssertionError("no QR code could be read from " + screenshot, e);
 		}
+	}
+
+	private static List<String> pauseMenuLines(final ClientGameTestContext context) {
+		return context.computeOnClient(client -> PauseMenuStatus.lines(DgLabClient.config(), DgLabClient.controller())
+				.stream().map(Component::getString).toList());
 	}
 
 	private static List<String> hudLines(final ClientGameTestContext context) {

@@ -30,7 +30,7 @@ You also need a DG-LAB Coyote 3.0 and the DG-LAB app on a phone that is on the s
 
 1. Connect the Coyote to the DG-LAB app as usual and set the strength limits of both channels in the app.
 2. In Minecraft, open the mod's configuration screen and choose **Pair Device...**. The screen shows a QR code.
-3. In the DG-LAB app, open **SOCKET control** and scan the code. The pairing screen and the HUD show when the app is connected.
+3. In the DG-LAB app, open **SOCKET control** and scan the code. The pairing screen shows when the app is connected, and the HUD then shows both channels' strength. While no app is connected, the HUD stays empty and the pause menu says "DG-LAB: not connected".
 
 The first time, your operating system may ask whether Minecraft may accept network connections; allow it for private networks. If the phone cannot connect, the QR code may point to the wrong network: choose the right address under **Connection Settings...**.
 
@@ -71,7 +71,7 @@ On/off settings, each with a toggle key:
 | Damage Response | On | Whether damage raises the strength. |
 | Death Response | On | Whether death raises the strength. |
 | Low Health Floor | On | Whether the strength stops decaying at the floor. |
-| Strength HUD | On | Whether both channels' strength is shown on screen. |
+| Strength HUD | On | Whether both channels' strength is shown on screen while an app is connected. Without an app, the pause menu says so instead. |
 | Show Limits in HUD | Off | Whether the HUD also shows the limits set in the app. |
 | Two-Player Mode | Off | See below. |
 

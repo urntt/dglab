@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.urntt.dglab.command.DgLabCommand;
 import com.urntt.dglab.config.DgLabConfig;
 import com.urntt.dglab.config.ToggleSetting;
+import com.urntt.dglab.hud.PauseMenuStatus;
 import com.urntt.dglab.hud.StrengthHud;
 import com.urntt.dglab.protocol.Channel;
 import com.urntt.dglab.screen.DgLabConfigScreen;
@@ -57,6 +58,7 @@ public final class DgLabClient implements ClientModInitializer {
 		ClientLifecycleEvents.CLIENT_STOPPING.register(stoppingClient -> controller.close());
 
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "strength"), new StrengthHud());
+		PauseMenuStatus.register();
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, buildContext) -> DgLabCommand.register(dispatcher));
 	}
 

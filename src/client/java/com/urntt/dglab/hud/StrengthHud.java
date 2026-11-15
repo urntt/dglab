@@ -16,14 +16,11 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 /**
- * Shows both channels' strength, or the state of the connection while no app is bound.
+ * Shows both channels' strength while an app is bound. Without an app the HUD stays empty; the state of the
+ * connection is shown on the pause menu instead, by {@link PauseMenuStatus}.
  */
 public final class StrengthHud implements HudElement {
-	public static final Component NOT_CONNECTED = Component.translatable("hud.dglab.not_connected");
-	public static final Component SERVER_FAILED = Component.translatable("hud.dglab.server_failed");
-
 	private static final int TEXT_COLOR = 0xFFFFFFFF;
-	private static final int WARNING_COLOR = 0xFFFF5555;
 
 	@Override
 	public void extractRenderState(final GuiGraphicsExtractor graphics, final DeltaTracker deltaTracker) {
@@ -32,39 +29,18 @@ public final class StrengthHud implements HudElement {
 		if (!config.get(ToggleSetting.HUD) || client.player == null) {
 			return;
 		}
-
-		DgLabController controller = DgLabClient.controller();
-		List<Component> lines = lines(config, controller, client.getUser().getName());
-		if (lines.isEmpty()) {
-			return;
-		}
-		int color = controller.strength().isBound() ? TEXT_COLOR : WARNING_COLOR;
-
-		Font font = client.font;
-		int width = lines.stream().mapToInt(font::width).max().orElse(0);
-		int height = lines.size() * font.lineHeight;
-		// The position is the share of the free space to the left of and above the text, so 100% touches the far edge.
-		int x = (graphics.guiWidth() - width) * config.hudX() / DgLabConfig.MAX_HUD_PERCENT;
-		int y = (graphics.guiHeight() - height) * config.hudY() / DgLabConfig.MAX_HUD_PERCENT;
-		for (Component line : lines) {
-			graphics.text(font, line, x, y, color);
-			y += font.lineHeight;
-		}
+		draw(graphics, client.font, lines(config, DgLabClient.controller(), client.getUser().getName()), TEXT_COLOR, config);
 	}
 
 	/**
-	 * Returns the lines the HUD shows right now. Nothing is shown while the connection server is switched off.
+	 * Returns the lines the HUD shows right now: one per channel while an app is bound, none otherwise.
 	 *
 	 * @param localPlayerName labels channel A in two-player mode
 	 */
 	public static List<Component> lines(final DgLabConfig config, final DgLabController controller, final String localPlayerName) {
 		StrengthController strength = controller.strength();
 		if (!strength.isBound()) {
-			return switch (controller.server().state()) {
-				case STOPPED -> List.of();
-				case FAILED -> List.of(SERVER_FAILED);
-				default -> List.of(NOT_CONNECTED);
-			};
+			return List.of();
 		}
 
 		List<Component> lines = new ArrayList<>();
@@ -78,5 +54,21 @@ public final class StrengthHud implements HudElement {
 					: Component.translatable("hud.dglab.strength", name, strength.strength(channel)));
 		}
 		return lines;
+	}
+
+	/**
+	 * Draws lines of text at the configured HUD position. The position is the share of the free space to the left
+	 * of and above the text, so 100% touches the far edge.
+	 */
+	static void draw(final GuiGraphicsExtractor graphics, final Font font, final List<Component> lines, final int color,
+			final DgLabConfig config) {
+		int width = lines.stream().mapToInt(font::width).max().orElse(0);
+		int height = lines.size() * font.lineHeight;
+		int x = (graphics.guiWidth() - width) * config.hudX() / DgLabConfig.MAX_HUD_PERCENT;
+		int y = (graphics.guiHeight() - height) * config.hudY() / DgLabConfig.MAX_HUD_PERCENT;
+		for (Component line : lines) {
+			graphics.text(font, line, x, y, color);
+			y += font.lineHeight;
+		}
 	}
 }

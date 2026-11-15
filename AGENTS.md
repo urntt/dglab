@@ -49,6 +49,7 @@ The mod version itself follows [Semantic Versioning](https://semver.org/); the `
 - `DgLabController` is the single owner of the output state: it combines the configuration, the connection, and the game events every client tick.
 - Strength rules, per channel: damage adds strength and starts a hold period; after the hold the strength decays in steps down to a floor that scales with lost health; death raises the strength by a fixed amount. The strength never exceeds the limit set in the app.
 - Waveforms: a damage waveform loops during the hold period and a recovery waveform loops while the strength decays. Each of the four slots (channel A or B, damage or recovery) holds either a built-in preset or a custom waveform made in the waveform editor.
+- The HUD shows the strengths only while an app is bound. Otherwise it stays empty, and the pause menu shows the state of the connection ("not connected", "port unavailable") at the HUD's position. The HUD's on/off setting hides both.
 - Safety behavior: turning the master switch off, leaving the world, or stopping the connection server sets both channels to zero and clears the queued waveforms.
 - Every on/off setting is a `ToggleSetting`. Each has an entry on the configuration screen and its own key binding, unbound by default; pressing it flips the setting, saves it, and shows the new state on the action bar. Numeric settings have no key binding.
 - A further key binding, also unbound by default, opens the configuration screen. Mod Menu and the `/dglab settings` command open it too.
