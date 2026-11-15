@@ -40,6 +40,7 @@ public final class DgLabCommand {
 	private static final String SETTING = "setting";
 	private static final String OPTION = "option";
 	private static final String SLOT = "slot";
+	private static final String PERCENT = "percent";
 	private static final String VALUE_A = "a";
 	private static final String VALUE_B = "b";
 	private static final int SUCCESS = 1;
@@ -63,6 +64,10 @@ public final class DgLabCommand {
 								.then(ClientCommands.argument(VALUE_A, IntegerArgumentType.integer(0, AppCommands.MAX_STRENGTH))
 										.then(ClientCommands.argument(VALUE_B, IntegerArgumentType.integer(0, AppCommands.MAX_STRENGTH))
 												.executes(DgLabCommand::setStrength)))))
+				.then(ClientCommands.literal("multiplier")
+						.executes(DgLabCommand::getMultiplier)
+						.then(ClientCommands.argument(PERCENT, IntegerArgumentType.integer(0, DgLabConfig.MAX_OUTPUT_MULTIPLIER))
+								.executes(DgLabCommand::setMultiplier)))
 				.then(ClientCommands.literal("toggle")
 						.then(ClientCommands.argument(SETTING, StringArgumentType.word())
 								.suggests(suggest(() -> Arrays.stream(ToggleSetting.values()).map(ToggleSetting::id).toArray(String[]::new)))
@@ -131,6 +136,16 @@ public final class DgLabCommand {
 		strength.setStrength(Channel.A, IntegerArgumentType.getInteger(context, VALUE_A));
 		strength.setStrength(Channel.B, IntegerArgumentType.getInteger(context, VALUE_B));
 		return getStrength(context);
+	}
+
+	private static int getMultiplier(final CommandContext<FabricClientCommandSource> context) {
+		context.getSource().sendFeedback(Component.translatable("commands.dglab.multiplier", DgLabClient.config().outputMultiplier()));
+		return SUCCESS;
+	}
+
+	private static int setMultiplier(final CommandContext<FabricClientCommandSource> context) {
+		DgLabClient.config().setOutputMultiplier(IntegerArgumentType.getInteger(context, PERCENT));
+		return getMultiplier(context);
 	}
 
 	private static int toggle(final CommandContext<FabricClientCommandSource> context) {

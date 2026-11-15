@@ -111,6 +111,9 @@ final class GameTestSupport {
 				config.setWaveformPreset(slot, slot.defaultPreset());
 			}
 			config.setTwoPlayer("", 0);
+			config.setOutputMultiplier(DgLabConfig.DEFAULT_OUTPUT_MULTIPLIER);
+			config.setHudX(DgLabConfig.DEFAULT_HUD_PERCENT);
+			config.setHudY(DgLabConfig.DEFAULT_HUD_PERCENT);
 		});
 	}
 

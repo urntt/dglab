@@ -34,6 +34,10 @@ public final class DgLabConfig {
 	/** The value of the QR code address that means "pick a LAN address of this computer". */
 	public static final String QR_ADDRESS_AUTOMATIC = "";
 	public static final int MAX_HUD_PERCENT = 100;
+	public static final int DEFAULT_HUD_PERCENT = 2;
+	/** The output multiplier, in percent, that leaves the strength settings as they are. */
+	public static final int DEFAULT_OUTPUT_MULTIPLIER = 100;
+	public static final int MAX_OUTPUT_MULTIPLIER = 1000;
 	public static final int MAX_PLAYER_NAME_LENGTH = 16;
 	/** The preset name that selects a slot's custom waveform. */
 	public static final String CUSTOM_WAVEFORM = "custom";
@@ -117,6 +121,19 @@ public final class DgLabConfig {
 
 	public void setValue(final Channel channel, final ChannelOption option, final double value) {
 		this.settings.channels.get(channel.id()).put(option.id(), option.normalize(value));
+		this.save();
+	}
+
+	/**
+	 * The percentage by which every strength that game events produce is scaled, on both channels. At 0, game
+	 * events produce no output.
+	 */
+	public int outputMultiplier() {
+		return this.settings.outputMultiplier;
+	}
+
+	public void setOutputMultiplier(final int percent) {
+		this.settings.outputMultiplier = Math.clamp(percent, 0, MAX_OUTPUT_MULTIPLIER);
 		this.save();
 	}
 
@@ -237,6 +254,7 @@ public final class DgLabConfig {
 	 */
 	private static final class Settings {
 		private Map<String, Boolean> toggles = new LinkedHashMap<>();
+		private int outputMultiplier = DEFAULT_OUTPUT_MULTIPLIER;
 		private Map<String, Map<String, Double>> channels = new LinkedHashMap<>();
 		private Connection connection = new Connection();
 		private Hud hud = new Hud();
@@ -250,6 +268,7 @@ public final class DgLabConfig {
 				toggles.put(setting.id(), value != null ? value : setting.defaultValue());
 			}
 			this.toggles = toggles;
+			this.outputMultiplier = Math.clamp(this.outputMultiplier, 0, MAX_OUTPUT_MULTIPLIER);
 
 			Map<String, Map<String, Double>> channels = new LinkedHashMap<>();
 			for (Channel channel : Channel.values()) {
@@ -312,8 +331,8 @@ public final class DgLabConfig {
 	}
 
 	private static final class Hud {
-		private int x = 2;
-		private int y = 2;
+		private int x = DEFAULT_HUD_PERCENT;
+		private int y = DEFAULT_HUD_PERCENT;
 	}
 
 	private static final class TwoPlayer {

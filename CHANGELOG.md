@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Pair with the DG-LAB app by scanning a QR code shown in game. The mod hosts the connection server itself, on port 9999 by default.
 - Raise the strength of both channels of a Coyote 3.0 when the player takes damage or dies, hold it, then let it decay down to a floor that grows with lost health. Each channel has its own settings.
+- Add an output multiplier, from 0% to 1000%, that scales what damage, death, and the floor produce on both channels.
 - Play a waveform after damage and another during recovery, chosen per channel from built-in waveforms or made in a waveform editor that also copies and pastes waveform code.
 - Show both channels' strength, and optionally the limits set in the app, on a HUD while an app is connected. While none is, the pause menu says so.
 - Add a two-player mode for worlds opened to LAN, in which a second player's health drives channel B.

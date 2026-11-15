@@ -94,7 +94,7 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 				checkDeath(context, server, app);
 				checkToggleKeys(context, server, app);
 				app = checkServerToggle(context, app);
-				checkCommands(context, app);
+				checkCommands(context, server, app);
 				checkOpenSettingsKey(context);
 				checkScreens(context);
 
@@ -335,7 +335,7 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 		return connectApp(context);
 	}
 
-	private static void checkCommands(final ClientGameTestContext context, final FakeDgLabApp app) {
+	private static void checkCommands(final ClientGameTestContext context, final TestServerContext server, final FakeDgLabApp app) {
 		int beforeSet = app.commands().size();
 		runCommand(context, "dglab strength set 5 6");
 		checkEquals(List.of("strength-1+2+5", "strength-2+2+6"), awaitCommands(context, app, beforeSet, "after /dglab strength set").subList(0, 2),
@@ -348,6 +348,20 @@ public final class DgLabClientGameTest implements FabricClientGameTest {
 		check(get(context, ToggleSetting.HUD_LIMIT), "/dglab toggle must switch the setting on");
 		runCommand(context, "dglab toggle hud_limit");
 		check(!get(context, ToggleSetting.HUD_LIMIT), "/dglab toggle must switch the setting off again");
+
+		// The output multiplier halves what damage adds: 2 points at 3 per point give 3 instead of 6.
+		runCommand(context, "dglab multiplier 50");
+		checkEquals(50, context.computeOnClient(client -> DgLabClient.config().outputMultiplier()), "output multiplier after /dglab multiplier");
+		checkEquals(50, loadSavedConfig().outputMultiplier(), "saved output multiplier");
+		int beforeScaledDamage = app.commands().size();
+		server.runCommand("damage @p 2");
+		checkEquals(List.of("strength-1+1+3", "strength-2+1+3"),
+				awaitCommands(context, app, beforeScaledDamage, "after damage at 50%").subList(0, 2), "commands after 2 points of damage at 50%");
+		runCommand(context, "dglab multiplier 100");
+		runCommand(context, "dglab multiplier");
+		runCommand(context, "dglab strength set 0 0");
+		context.waitFor(client -> DgLabClient.controller().strength().strength(Channel.A) == 0 && app.strength(Channel.A) == 0);
+		context.waitTicks(2 * HOLD_TICKS);
 
 		runCommand(context, "dglab config set decay_step 2 3");
 		checkEquals(2.0, context.computeOnClient(client -> DgLabClient.config().value(Channel.A, ChannelOption.DECAY_STEP)), "decay step of channel A");

@@ -89,6 +89,7 @@ Strength settings, separate for each channel:
 
 Other settings:
 
+- **Output Multiplier** scales the strength that damage, death, and the floor produce on both channels, from 0% to 1000%. It is 100% by default, and at 0% game events produce no output. The slider moves in steps of 1%; use the arrow keys on the selected slider or `/dglab multiplier` for an exact value. However large it is, the strength stays within the limits set in the app.
 - **HUD X, HUD Y** place the HUD, from one screen edge (0%) to the opposite one (100%).
 - **Connection Settings...** changes the port the server listens on (9999 by default) and the address and port in the QR code.
 - **Waveforms...** chooses the waveform of each channel after damage and during recovery: a built-in one or **Custom**. **Edit Custom Waveform...** opens an editor with one row per 25 ms. A row is either set by hand or interpolated between the nearest hand-set rows. The editor copies and pastes waveform code in the hexadecimal form other DG-LAB tools use. A waveform is at most 8 seconds long.
@@ -107,6 +108,7 @@ The `/dglab` client command offers the same functions from the chat:
 | `/dglab settings`, `/dglab pair` | Opens the configuration screen or the pairing screen. |
 | `/dglab server start`, `/dglab server stop` | Starts or stops the connection server. |
 | `/dglab strength get`, `/dglab strength set <a> <b>` | Shows or sets both channels' strength. |
+| `/dglab multiplier`, `/dglab multiplier <percent>` | Shows or sets the output multiplier. |
 | `/dglab toggle <setting>` | Flips an on/off setting. |
 | `/dglab config get`, `/dglab config set <option> <a> <b>` | Shows the strength settings, or sets one for both channels. Times are in ticks. |
 | `/dglab test <slot>` | Plays a waveform slot once. |

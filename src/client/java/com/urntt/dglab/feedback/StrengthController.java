@@ -23,6 +23,8 @@ import java.util.function.Consumer;
  *   <li>the damage waveform loops during the hold period, the recovery waveform while strength remains.</li>
  * </ul>
  *
+ * <p>The output multiplier scales every strength these rules produce: what damage and death add, and the floor.
+ *
  * <p>The class has no dependency on the game, so the rules can be tested without a world.
  */
 public final class StrengthController {
@@ -42,6 +44,7 @@ public final class StrengthController {
 
 	/** Ticks between clearing a channel's pulse queue and sending the next waveform, so the app handles them in order. */
 	private static final int CLEAR_SETTLE_TICKS = 1;
+	private static final double PERCENT = 100.0;
 
 	private final DgLabConfig config;
 	private final Consumer<String> output;
@@ -89,7 +92,7 @@ public final class StrengthController {
 			return;
 		}
 		for (Channel channel : Channel.values()) {
-			double perDamage = this.config.value(channel, ChannelOption.STRENGTH_PER_DAMAGE);
+			double perDamage = this.config.value(channel, ChannelOption.STRENGTH_PER_DAMAGE) * this.multiplier();
 			if (!this.responds(channel, source) || perDamage <= 0.0) {
 				continue;
 			}
@@ -105,12 +108,12 @@ public final class StrengthController {
 	 * Called when a player died. A fatal hit is reported through {@link #onDamage} first.
 	 */
 	public void onDeath(final Source source) {
-		if (!this.isDriving() || !this.config.get(ToggleSetting.DEATH_RESPONSE)) {
+		if (!this.isDriving() || !this.config.get(ToggleSetting.DEATH_RESPONSE) || this.multiplier() <= 0.0) {
 			return;
 		}
 		for (Channel channel : Channel.values()) {
 			if (this.responds(channel, source)) {
-				this.raise(channel, this.config.intValue(channel, ChannelOption.DEATH_STRENGTH));
+				this.raise(channel, this.scaled(this.config.value(channel, ChannelOption.DEATH_STRENGTH)));
 			}
 		}
 	}
@@ -119,7 +122,7 @@ public final class StrengthController {
 	 * Called when the second player left the world while alive.
 	 */
 	public void onSecondPlayerLeft() {
-		int strength = this.config.secondPlayerQuitStrength();
+		int strength = this.scaled(this.config.secondPlayerQuitStrength());
 		if (this.isDriving() && strength > 0 && this.config.get(ToggleSetting.CHANNEL_B)) {
 			this.raise(Channel.B, strength);
 		}
@@ -213,6 +216,16 @@ public final class StrengthController {
 		return this.twoPlayerActive;
 	}
 
+	/** The factor the output multiplier setting stands for. */
+	private double multiplier() {
+		return this.config.outputMultiplier() / PERCENT;
+	}
+
+	/** Applies the output multiplier to a strength and rounds it to the nearest whole number. */
+	private int scaled(final double strength) {
+		return (int) Math.round(strength * this.multiplier());
+	}
+
 	/** Whether game events currently reach the device. */
 	private boolean isDriving() {
 		return this.bound && this.inWorld && this.config.get(ToggleSetting.ENABLED);
@@ -257,7 +270,7 @@ public final class StrengthController {
 		int step = this.config.intValue(channel, ChannelOption.DECAY_STEP);
 		int floor = this.config.get(ToggleSetting.HEALTH_FLOOR)
 				// Rounded to the nearest whole number, because the lost share is rarely an exact fraction.
-				? (int) Math.round(this.config.value(channel, ChannelOption.FLOOR_STRENGTH) * Math.clamp(lostHealth, 0.0F, 1.0F))
+				? this.scaled(this.config.value(channel, ChannelOption.FLOOR_STRENGTH) * Math.clamp(lostHealth, 0.0F, 1.0F))
 				: 0;
 		if (step <= 0 || state.strength <= floor) {
 			state.decayTimer = interval;

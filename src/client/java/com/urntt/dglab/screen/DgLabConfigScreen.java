@@ -41,6 +41,8 @@ public final class DgLabConfigScreen extends OptionsSubScreen {
 
 		this.list.addHeader(Component.translatable("options.dglab.section.output"));
 		this.list.addBig(toggleOption(ToggleSetting.ENABLED));
+		this.list.addBig(percentOption("options.dglab.output_multiplier", config.outputMultiplier(), DgLabConfig.MAX_OUTPUT_MULTIPLIER,
+				config::setOutputMultiplier));
 		this.list.addSmall(toggleOption(ToggleSetting.CHANNEL_A), toggleOption(ToggleSetting.CHANNEL_B));
 		this.list.addSmall(toggleOption(ToggleSetting.DAMAGE_RESPONSE), toggleOption(ToggleSetting.DEATH_RESPONSE));
 		this.list.addSmall(this.toggle(ToggleSetting.HEALTH_FLOOR),
@@ -49,8 +51,8 @@ public final class DgLabConfigScreen extends OptionsSubScreen {
 
 		this.list.addHeader(Component.translatable("options.dglab.section.hud"));
 		this.list.addSmall(toggleOption(ToggleSetting.HUD), toggleOption(ToggleSetting.HUD_LIMIT));
-		this.list.addSmall(percentOption("options.dglab.hud_x", config.hudX(), config::setHudX),
-				percentOption("options.dglab.hud_y", config.hudY(), config::setHudY));
+		this.list.addSmall(percentOption("options.dglab.hud_x", config.hudX(), DgLabConfig.MAX_HUD_PERCENT, config::setHudX),
+				percentOption("options.dglab.hud_y", config.hudY(), DgLabConfig.MAX_HUD_PERCENT, config::setHudY));
 
 		this.list.addHeader(Component.translatable("options.dglab.section.two_player"));
 		this.list.addSmall(this.toggle(ToggleSetting.TWO_PLAYER),
@@ -82,12 +84,13 @@ public final class DgLabConfigScreen extends OptionsSubScreen {
 				.build();
 	}
 
-	private static OptionInstance<Integer> percentOption(final String captionKey, final int value, final IntConsumer onChange) {
+	private static OptionInstance<Integer> percentOption(final String captionKey, final int value, final int max,
+			final IntConsumer onChange) {
 		return new OptionInstance<>(
 				captionKey,
 				OptionInstance.cachedConstantTooltip(Component.translatable(captionKey + ".tooltip")),
 				(caption, percent) -> Component.translatable(PERCENT_VALUE_KEY, caption, percent),
-				new OptionInstance.IntRange(0, DgLabConfig.MAX_HUD_PERCENT),
+				new OptionInstance.IntRange(0, max),
 				value,
 				onChange::accept);
 	}

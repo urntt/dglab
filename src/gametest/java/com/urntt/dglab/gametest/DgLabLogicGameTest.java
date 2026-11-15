@@ -62,6 +62,7 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 			checkHealthTracker();
 			checkStrengthRules(directory);
 			checkTwoPlayerRules(directory);
+			checkOutputMultiplier(directory);
 			checkPairingQr();
 			checkPairingServer();
 			checkPauseMenuStatus(directory);
@@ -169,6 +170,7 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 		checkEquals(DgLabConfig.QR_ADDRESS_AUTOMATIC, defaults.qrAddress(), "default QR address");
 		checkEquals(DgLabConfig.QR_PORT_SAME_AS_LISTEN, defaults.qrPort(), "default QR port");
 		checkEquals(0, defaults.secondPlayerQuitStrength(), "default strength added when the second player leaves");
+		checkEquals(100, defaults.outputMultiplier(), "default output multiplier");
 		for (WaveformSlot slot : WaveformSlot.values()) {
 			checkEquals(slot.defaultPreset(), defaults.waveformPreset(slot).orElse(null), "default preset of " + slot.id());
 		}
@@ -177,6 +179,11 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 		defaults.setValue(Channel.B, ChannelOption.STRENGTH_PER_DAMAGE, 1.26);
 		defaults.setConnection(12345, "192.168.1.20", 23456);
 		defaults.setHudX(40);
+		defaults.setOutputMultiplier(1001);
+		checkEquals(DgLabConfig.MAX_OUTPUT_MULTIPLIER, defaults.outputMultiplier(), "an output multiplier above the maximum");
+		defaults.setOutputMultiplier(-5);
+		checkEquals(0, defaults.outputMultiplier(), "a negative output multiplier");
+		defaults.setOutputMultiplier(250);
 		defaults.setTwoPlayer("  Alex  ", 30);
 		Waveform custom = Waveform.ofIntensities(100, 10, 20, 30, 40);
 		defaults.setCustomWaveform(WaveformSlot.B_RECOVERY, custom);
@@ -190,6 +197,7 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 		checkEquals("192.168.1.20", saved.qrAddress(), "saved QR address");
 		checkEquals(23456, saved.qrPort(), "saved QR port");
 		checkEquals(40, saved.hudX(), "saved HUD position");
+		checkEquals(250, saved.outputMultiplier(), "saved output multiplier");
 		checkEquals("Alex", saved.secondPlayer(), "saved second player");
 		checkEquals(30, saved.secondPlayerQuitStrength(), "saved strength added when the second player leaves");
 		check(saved.waveformPreset(WaveformSlot.B_RECOVERY).isEmpty(), "the slot must use its custom waveform");
@@ -208,12 +216,13 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 		check(Files.readString(partial).contains("\"two_player\""), "a completed file must be written back");
 
 		Path invalid = directory.resolve("invalid.json");
-		Files.writeString(invalid, "{\"connection\":{\"listen_port\":70000,\"qr_port\":-1},\"hud\":{\"x\":500},"
+		Files.writeString(invalid, "{\"output_multiplier\":5000,\"connection\":{\"listen_port\":70000,\"qr_port\":-1},\"hud\":{\"x\":500},"
 				+ "\"channels\":{\"a\":{\"decay_interval\":0,\"strength_per_damage\":99}},"
 				+ "\"two_player\":{\"player\":\"a name that is far too long\",\"quit_strength\":999},"
 				+ "\"waveforms\":{\"a_damage\":{\"preset\":\"nope\",\"custom\":[\"zz\"]}}}");
 		DgLabConfig repaired = DgLabConfig.load(invalid);
 		checkEquals(DgLabConfig.DEFAULT_PORT, repaired.listenPort(), "an invalid listen port");
+		checkEquals(DgLabConfig.MAX_OUTPUT_MULTIPLIER, repaired.outputMultiplier(), "an out-of-range output multiplier");
 		checkEquals(DgLabConfig.QR_PORT_SAME_AS_LISTEN, repaired.qrPort(), "an invalid QR port");
 		checkEquals(DgLabConfig.MAX_HUD_PERCENT, repaired.hudX(), "an out-of-range HUD position");
 		checkEquals(1.0, repaired.value(Channel.A, ChannelOption.DECAY_INTERVAL), "a decay interval below the minimum");
@@ -483,6 +492,50 @@ public final class DgLabLogicGameTest implements FabricClientGameTest {
 		rules.twoPlayer = false;
 		rules.tick();
 		checkEquals(List.of("strength-1+1+6", "strength-2+1+6"), rules.during(() -> rules.controller.onDamage(Source.LOCAL, 2.0F)), "damage after two-player mode ended");
+	}
+
+	/**
+	 * The output multiplier scales what damage, death, a leaving second player, and the floor produce.
+	 */
+	private static void checkOutputMultiplier(final Path directory) {
+		Rules half = new Rules(directory.resolve("multiplier-half.json"));
+		half.set(ChannelOption.DECAY_INTERVAL, 1);
+		half.set(ChannelOption.DECAY_STEP, 5);
+		half.set(ChannelOption.HOLD_TICKS, 0);
+		half.set(ChannelOption.DEATH_HOLD_TICKS, 0);
+		half.config.setOutputMultiplier(50);
+		half.bind(0, 100);
+		checkEquals(List.of("strength-1+1+6", "strength-2+1+6"), half.during(() -> half.controller.onDamage(Source.LOCAL, 4.0F)), "4 points of damage at 50%");
+		checkEquals(List.of("strength-1+2+31", "strength-2+2+31"), half.during(() -> half.controller.onDeath(Source.LOCAL)), "death at 50%");
+		// At half health the floor is half of 40, and half of that at 50%.
+		half.localLostHealth = 0.5F;
+		checkEquals(List.of("strength-1+0+5", "strength-1+0+5", "strength-1+0+5", "strength-1+0+5", "strength-1+2+10"),
+				strengthCommands(half.ticks(10), Channel.A), "decay to the floor at 50%");
+		half.config.setTwoPlayer("Alex", 30);
+		checkEquals(List.of("strength-2+2+25"), half.during(half.controller::onSecondPlayerLeft), "the second player leaving at 50%");
+
+		Rules more = new Rules(directory.resolve("multiplier-more.json"));
+		more.config.setOutputMultiplier(250);
+		more.bind(0, 100);
+		checkEquals(List.of("strength-1+1+30", "strength-2+1+30"), more.during(() -> more.controller.onDamage(Source.LOCAL, 4.0F)), "4 points of damage at 250%");
+
+		// However large the multiplier, the mod's view of the strength stays within the app's limit.
+		Rules most = new Rules(directory.resolve("multiplier-most.json"));
+		most.config.setOutputMultiplier(DgLabConfig.MAX_OUTPUT_MULTIPLIER);
+		most.bind(0, 100);
+		checkEquals(List.of("strength-1+1+120", "strength-2+1+120"), most.during(() -> most.controller.onDamage(Source.LOCAL, 4.0F)), "4 points of damage at 1000%");
+		checkEquals(100, most.controller.strength(Channel.A), "strength capped at the app's limit at 1000%");
+
+		// At 0%, game events produce nothing, and there is no floor.
+		Rules none = new Rules(directory.resolve("multiplier-none.json"));
+		none.set(ChannelOption.DECAY_INTERVAL, 1);
+		none.set(ChannelOption.DECAY_STEP, 5);
+		none.config.setOutputMultiplier(0);
+		none.localLostHealth = 1.0F;
+		none.bind(10, 100);
+		checkEquals(List.of(), none.during(() -> none.controller.onDamage(Source.LOCAL, 10.0F)), "damage at 0%");
+		checkEquals(List.of(), none.during(() -> none.controller.onDeath(Source.LOCAL)), "death at 0%");
+		checkEquals(List.of("strength-1+0+5", "strength-1+0+5"), strengthCommands(none.ticks(10), Channel.A), "decay without a floor at 0%");
 	}
 
 	private static void checkPairingQr() throws FormatException, ChecksumException {
