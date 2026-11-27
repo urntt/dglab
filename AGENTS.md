@@ -86,6 +86,7 @@ The mod version itself follows [Semantic Versioning](https://semver.org/); the `
 
 - Language: Java only.
 - Source sets: `src/main` holds only `fabric.mod.json` and the icon. All code and client resources live in `src/client`, and the client game tests live in `src/gametest`.
+- The icon is drawn in `assets/dglab/icon.svg`, its single source. `icon.png`, which Fabric, Mod Menu, and OneConfig read, is rendered from it at 128×128 with the command in `README.md`. Edit the SVG, never the PNG, and render the PNG again in the same change.
 - Mixins: prefer the MixinExtras injectors bundled with Fabric Loader (for example `@ModifyExpressionValue` and `@WrapOperation`) over `@Redirect` and `@Overwrite`, to stay compatible with other mods and keep porting work small.
 - The only mixin observes `LocalPlayer.hurtTo`, which receives every health value the server sends. It remembers the previous health itself: by the time `hurtTo` runs, the player's health has usually been updated through its synced entity data already, so comparing with `getHealth()` finds no damage.
 - `feedback.StrengthController` and the `protocol` and `waveform` packages must not reach into the running game (no `Minecraft`, world, or player access), so that the rules can be tested without a world. `DgLabController` and `SecondPlayerMonitor` do that part.

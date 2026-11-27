@@ -172,6 +172,12 @@ The tests run with [OneConfig](#oneconfig) installed, which `build.gradle` adds 
 
 The tests cannot reach a real device. Changes to the protocol or to what is sent need a check with real hardware.
 
+The mod icon is drawn in `src/main/resources/assets/dglab/icon.svg`. Fabric and Mod Menu read `icon.png` next to it, which is rendered from the SVG with librsvg (`librsvg2-bin` on Ubuntu). After changing the SVG, render the PNG again:
+
+```bash
+rsvg-convert -w 128 -h 128 src/main/resources/assets/dglab/icon.svg -o src/main/resources/assets/dglab/icon.png
+```
+
 ## License
 
 [MIT](LICENSE)
