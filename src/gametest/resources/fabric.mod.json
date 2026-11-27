@@ -8,7 +8,8 @@
 		"fabric-client-gametest": [
 			"com.urntt.dglab.gametest.DgLabLogicGameTest",
 			"com.urntt.dglab.gametest.DgLabClientGameTest",
-			"com.urntt.dglab.gametest.DgLabMultiplayerGameTest"
+			"com.urntt.dglab.gametest.DgLabMultiplayerGameTest",
+			"com.urntt.dglab.gametest.DgLabOneConfigGameTest"
 		]
 	},
 	"depends": {

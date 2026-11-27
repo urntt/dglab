@@ -12,6 +12,24 @@ repositories {
 			includeGroup 'com.terraformersmc'
 		}
 	}
+	maven {
+		name = 'Polyfrost'
+		url = 'https://repo.polyfrost.org/releases'
+		content {
+			includeGroup 'org.polyfrost.oneconfig'
+		}
+	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'Modrinth'
+				url = 'https://api.modrinth.com/maven'
+			}
+		}
+		filter {
+			includeGroup 'maven.modrinth'
+		}
+	}
 }
 
 loom {
@@ -49,6 +67,22 @@ dependencies {
 	// Mod Menu is optional: compile against it, and load it only in the development client.
 	clientCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 	localRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	// OneConfig is optional too. Only its small API artifacts are compiled against; the game tests use them as well.
+	["config", "config-impl"].each { module ->
+		clientCompileOnly("org.polyfrost.oneconfig:${module}:${project.oneconfig_version}") { transitive = false }
+		gametestCompileOnly("org.polyfrost.oneconfig:${module}:${project.oneconfig_version}") { transitive = false }
+	}
+	clientCompileOnly("org.polyfrost.oneconfig:mod-toggles:${project.oneconfig_mod_toggles_version}") { transitive = false }
+	// The game tests open OneConfig's screen to take screenshots of it.
+	gametestCompileOnly("org.polyfrost.oneconfig:ui:${project.oneconfig_version}") { transitive = false }
+	// The development client and the game tests run with OneConfig, unless -Pdglab.oneconfig=false leaves it out
+	// to check that the mod works without it.
+	if (providers.gradleProperty("dglab.oneconfig").getOrElse("true").toBoolean()) {
+		localRuntime("maven.modrinth:oneconfig:${project.oneconfig_modrinth_version}") { transitive = false }
+		localRuntime("maven.modrinth:polycompose:${project.polycompose_modrinth_version}") { transitive = false }
+		localRuntime("net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}") { transitive = false }
+	}
 
 	// Decodes the pairing QR code in the game tests. It is not shipped.
 	gametestImplementation "com.google.zxing:core:${project.zxing_version}"

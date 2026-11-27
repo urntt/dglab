@@ -18,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,7 @@ public final class DgLabConfig {
 	private final Settings settings;
 	/** The waveform each slot currently plays, parsed once from the settings. */
 	private final Map<WaveformSlot, Waveform> waveforms = new EnumMap<>(WaveformSlot.class);
+	private final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 
 	private DgLabConfig(final Path path, final Settings settings) {
 		this.path = path;
@@ -241,12 +243,27 @@ public final class DgLabConfig {
 		}
 	}
 
+	/**
+	 * Registers a listener that runs after every change, once the change is saved. Views of the settings that live
+	 * outside this mod's own screens, such as OneConfig, use it to stay in sync.
+	 */
+	public void addListener(final Runnable listener) {
+		this.listeners.add(listener);
+	}
+
 	private void save() {
 		try {
 			Files.createDirectories(this.path.getParent());
 			Files.writeString(this.path, GSON.toJson(this.settings));
 		} catch (IOException e) {
 			LOGGER.error("Failed to write config file {}", this.path, e);
+		}
+		for (Runnable listener : this.listeners) {
+			try {
+				listener.run();
+			} catch (RuntimeException e) {
+				LOGGER.error("A config listener failed", e);
+			}
 		}
 	}
 

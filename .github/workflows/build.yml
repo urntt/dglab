@@ -35,9 +35,24 @@ jobs:
       # its Vulkan backend, rendered in software by Mesa's lavapipe driver.
       - name: install headless rendering
         run: sudo apt-get update && sudo apt-get install -y xvfb mesa-vulkan-drivers
-      - name: run client game tests
+      # The tests run twice: with OneConfig installed, which checks the
+      # integration, and without it, which checks that the mod does not need
+      # it.
+      - name: run client game tests with OneConfig
         run: xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest
-      - name: capture client game test screenshots
+      - name: capture client game test screenshots with OneConfig
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Client game test screenshots (OneConfig)
+          path: build/run/clientGameTest/screenshots/
+      - name: remove screenshots of the first run
+        if: ${{ !cancelled() }}
+        run: rm -rf build/run/clientGameTest/screenshots/
+      - name: run client game tests without OneConfig
+        if: ${{ !cancelled() }}
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest -Pdglab.oneconfig=false
+      - name: capture client game test screenshots without OneConfig
         if: always()
         uses: actions/upload-artifact@v7
         with:

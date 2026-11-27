@@ -24,6 +24,8 @@ Only a simulated app was available while developing this mod. Treat the first se
 
 [Mod Menu](https://modrinth.com/mod/modmenu) is optional. When installed, it opens the mod's configuration screen from its mod list.
 
+[OneConfig](https://modrinth.com/mod/oneconfig) is optional too. When installed, it shows all of dglab's settings in its own menu; see [OneConfig](#oneconfig).
+
 You also need a DG-LAB Coyote 3.0 and the DG-LAB app on a phone that is on the same network as your computer.
 
 ## Pairing
@@ -96,6 +98,19 @@ Other settings:
 - **Connection Settings...** changes the port the server listens on (9999 by default) and the address and port in the QR code.
 - **Waveforms...** chooses the waveform of each channel after damage and during recovery: a built-in one or **Custom**. **Edit Custom Waveform...** opens an editor with one row per 25 ms. A row is either set by hand or interpolated between the nearest hand-set rows. The editor copies and pastes waveform code in the hexadecimal form other DG-LAB tools use. A waveform is at most 8 seconds long.
 
+### OneConfig
+
+With [OneConfig](https://modrinth.com/mod/oneconfig) installed, dglab appears in OneConfig's mod list, which opens with Right Shift by default. Its page has every setting described above, including the connection settings. The **Pair Device...** and **Waveforms...** buttons there open dglab's own screens, and **Done** on those screens returns to OneConfig.
+
+OneConfig and dglab stay in sync while the game runs: a change made in OneConfig is saved to `config/dglab.json` at once, and a change made in dglab's own screens, with a toggle key, or with `/dglab` shows in OneConfig. Some details:
+
+- `config/dglab.json` stays the only place dglab's settings are saved. OneConfig keeps no copy of them, so switching OneConfig profiles does not change them.
+- A new listen port takes effect one second after you stop typing it, so the server does not restart for every digit. A QR code address that is not a valid host name or IP address is not saved.
+- Switching dglab off or on with the toggle on its card in OneConfig's mod list flips the **DG-LAB Output** master switch.
+- OneConfig's reset buttons put settings back to dglab's defaults.
+- While OneConfig's menu is open, its switches follow changes made elsewhere at once. Its sliders, number and text fields, and drop-down lists show such changes the next time the page is opened.
+- dglab's key binding, `/dglab settings`, and Mod Menu still open dglab's own configuration screen, as does **Original menu** on dglab's page in OneConfig.
+
 ### Two-player mode
 
 Two-player mode lets a second player drive channel B. It only works while you host a world opened to LAN, because only the host knows the other player's health. While the player named under **Two-Player Settings...** is in your world, your health drives channel A and theirs drives channel B. Optionally, channel B gains strength when that player leaves the world alive.
@@ -141,7 +156,19 @@ xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest
 
 Screenshots taken by the tests are saved to `build/run/clientGameTest/screenshots/`.
 
+When a test fails, Fabric Loader opens an error window and the game waits until it is closed. On a headless machine, set the `CI` environment variable to skip the window, as CI services do:
+
+```bash
+CI=true xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest
+```
+
 The multiplayer test starts a local dedicated server, so the test setup in `build.gradle` accepts the [Minecraft EULA](https://aka.ms/MinecraftEULA) for that test server.
+
+The tests run with [OneConfig](#oneconfig) installed, which `build.gradle` adds to the development game together with the mods it needs; none of them is included in the mod's jar. To run them without OneConfig, which checks that the mod works without it, add `-Pdglab.oneconfig=false`:
+
+```bash
+./gradlew runClientGameTest -Pdglab.oneconfig=false
+```
 
 The tests cannot reach a real device. Changes to the protocol or to what is sent need a check with real hardware.
 

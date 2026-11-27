@@ -21,6 +21,12 @@
 		],
 		"modmenu": [
 			"com.urntt.dglab.compat.ModMenuIntegration"
+		],
+		"oneconfig:config": [
+			"com.urntt.dglab.compat.oneconfig.OneConfigIntegration"
+		],
+		"oneconfig:toggle": [
+			"com.urntt.dglab.compat.oneconfig.OneConfigModToggle"
 		]
 	},
 	"mixins": [
@@ -36,6 +42,7 @@
 		"fabric-api": ">=${fabric_api_version}"
 	},
 	"suggests": {
-		"modmenu": "*"
+		"modmenu": "*",
+		"oneconfig": "*"
 	}
 }

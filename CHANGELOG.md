@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Show all settings in [OneConfig](https://modrinth.com/mod/oneconfig), which is optional, and keep them in sync with dglab's own screens, key bindings, and `/dglab` while the game runs. The settings are still saved only to `config/dglab.json`, so OneConfig profiles do not change them. The switch on dglab's card in OneConfig is the master switch.
+
 ## [1.0.0+26.3] - 2026-11-15
 
 The first release, for Minecraft 26.3. Read [Safety and risks](https://github.com/urntt/dglab#safety-and-risks) before you use it: the mod drives an electrical stimulation device, and so far it has only been tested against a simulated DG-LAB app, not a real device.

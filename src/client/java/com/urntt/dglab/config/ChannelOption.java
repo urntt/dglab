@@ -59,6 +59,37 @@ public enum ChannelOption {
 		return this.defaultValue;
 	}
 
+	public Unit unit() {
+		return this.unit;
+	}
+
+	public double min() {
+		return this.min;
+	}
+
+	public double max() {
+		return this.max;
+	}
+
+	/** The smallest change between two values this option can take. */
+	public double step() {
+		return 1.0 / this.stepsPerUnit;
+	}
+
+	/**
+	 * Converts a value to the unit the player sees: tick counts become seconds.
+	 */
+	public double toDisplayUnit(final double value) {
+		return this.unit == Unit.TICKS ? value / TICKS_PER_SECOND : value;
+	}
+
+	/**
+	 * Converts a value the player entered back from {@link #toDisplayUnit(double)}.
+	 */
+	public double fromDisplayUnit(final double value) {
+		return this.unit == Unit.TICKS ? value * TICKS_PER_SECOND : value;
+	}
+
 	/**
 	 * Returns the closest value this option can take.
 	 */
@@ -109,7 +140,7 @@ public enum ChannelOption {
 		return switch (this.unit) {
 			case FACTOR -> Component.literal(String.format(Locale.ROOT, "%.1f", value));
 			case TICKS -> Component.translatable("options.dglab.value.seconds",
-					String.format(Locale.ROOT, "%.2f", value / TICKS_PER_SECOND));
+					String.format(Locale.ROOT, "%.2f", this.toDisplayUnit(value)));
 			case STRENGTH -> Component.literal(Integer.toString((int) value));
 		};
 	}
