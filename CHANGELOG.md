@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0+26.3] - 2026-11-27
+
 ### Added
 
 - Show all settings in [OneConfig](https://modrinth.com/mod/oneconfig), which is optional, and keep them in sync with dglab's own screens, key bindings, and `/dglab` while the game runs. The settings are still saved only to `config/dglab.json`, so OneConfig profiles do not change them. The switch on dglab's card in OneConfig is the master switch.
